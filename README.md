@@ -32,7 +32,7 @@ Some important parameters available in command line:
 The following path lists can be modified in `config.py`:
 
 ```
-zh_kp_list, en_kp_list: the candidate concepts
+zh_list, en_list: the candidate concepts
 db: store the crawled snippets
 cookie_paths: some cookie files to support the crawl process
 ```
