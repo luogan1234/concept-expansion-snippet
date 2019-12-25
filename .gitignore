@@ -124,6 +124,12 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+tmp/
+bert_start/tmp*/
+data/
+bert-model/
+*zip
+*.db
 
 # Pyre type checker
 .pyre/
