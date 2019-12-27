@@ -10,7 +10,7 @@ do
       echo $cmd
       ;;
     zh1)
-      cmd="python main.py -task expand -l zh -it ${zh}DSA-seed.txt -ss baidu -nf"
+      cmd="python main.py -task expand -l zh -is ${zh}DSA-seed.txt -ss baidu -nf"
       echo $cmd
       ;;
     en0)

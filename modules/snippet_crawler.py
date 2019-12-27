@@ -7,10 +7,11 @@ import random
 import urllib
 import config
 import json
+import os
 
-s = requests.Session()
+sess = requests.Session()
 if config.snippet_source == 'google':
-    s.proxies.update(config.proxy)
+    sess.proxies.update(config.proxy)
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
 tot_crawl = 0
 
@@ -29,14 +30,14 @@ def load_cookie():
         with open(cookie_path, 'r', encoding='utf-8') as f:
             cookie = json.load(f)
             for i in range(len(cookie)):
-                s.cookies.set(cookie[i]['name'], cookie[i]['value'])
+                sess.cookies.set(cookie[i]['name'], cookie[i]['value'])
 load_cookie()
 
 def update_cookie(cookie):
     for c in cookie.split('; '):
         c = c.split('=', 1)
         if len(c) == 2:
-            s.cookies.set(c[0], c[1])
+            sess.cookies.set(c[0], c[1])
 
 def sleep(t):  # randomize the sleep time in [t, 1.5t)
     time.sleep(t+random.random()*t*0.5)
@@ -49,7 +50,7 @@ def crawl_snippet_google(concept):
     res = []
     url = 'https://www.google.com/search?gws_rd=cr&q={}'.format(concept)
     headers = {'user-agent': USER_AGENT, 'referer': 'https://www.google.com/'}
-    page = s.get(url, headers=headers)
+    page = sess.get(url, headers=headers)
     if 'Set-Cookie' in page.headers:
         update_cookie(page.headers['Set-Cookie'])
     soup = BeautifulSoup(page.text, 'html.parser')
@@ -76,11 +77,11 @@ def crawl_snippet_baidu(concept):
     res = []
     url = 'http://www.baidu.com/s?wd={}'.format(concept)
     headers = {'user-agent': USER_AGENT, 'referer': url}
-    page = s.get(url, headers=headers)
+    page = sess.get(url, headers=headers)
     soup = BeautifulSoup(page.text, 'html.parser')
     block = soup.find('div', class_='result-op c-container xpath-log')
     if block is not None:
-        title, snippet = '', '', ''
+        title, snippet = '', ''
         t = block.find('h3', class_='t')
         s = block.find('div', class_='c-span18 c-span-last')
         if t and t.find('a') and s and s.find('p'):
@@ -101,7 +102,7 @@ def crawl_snippet_bing(concept):
     res = []
     url = 'https://cn.bing.com/search?q={}'.format(concept)
     headers = {'user-agent': USER_AGENT, 'referer': url}
-    page = s.get(url, headers=headers)
+    page = sess.get(url, headers=headers)
     soup = BeautifulSoup(page.text, 'html.parser')
     if 'cookie' in page.headers:
         update_cookie(page.headers['cookie'])
@@ -148,12 +149,12 @@ def crawl_snippet(concept):
 def get_snippet(concept):
     conn = sqlite3.connect(config.db)
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM ? WHERE concept=?', (config.snippet_source, concept))
+    cursor.execute('SELECT * FROM {} WHERE concept=?'.format(config.snippet_source), (concept, ))
     res = cursor.fetchall()
     if not res:
         snippet = crawl_snippet(concept)
         print('get snippet {} from source {}'.format(concept, config.snippet_source))
-        cursor.execute('INSERT INTO ? (concept, snippet) VALUES (?,?)', (config.snippet_source, concept, snippet))
+        cursor.execute('INSERT INTO {} (concept, snippet) VALUES (?,?)'.format(config.snippet_source), (concept, snippet, ))
         conn.commit()
     else:
         snippet = res[0][1]

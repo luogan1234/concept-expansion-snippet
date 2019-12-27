@@ -4,8 +4,8 @@
 
 This toolkit provides graph propagation, average distance, PageRank and tf-idf algorithms with pretrained word vectors (BERT) to do the concept extraction and concept expansion tasks. It supports both Chinese and English text.
 
-- **Concept extraction:** Given seed concepts, extract the related concepts from the input text.
-- **Concept expansion:** Given seed concepts, extract the related concepts from the snippets of search engine results (Baidu for Chinese and Google for English).
+- **Concept extraction:** Given **seed concepts** and **text**, extract the related concepts from the input text.
+- **Concept expansion:** Given **seed concepts**, extract the related concepts from the snippets of search engine results (Baidu for Chinese and Google for English).
 
 ## Before running the code
 1. run `bash init.sh`.
