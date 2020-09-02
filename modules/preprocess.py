@@ -3,36 +3,9 @@ import nltk
 import jieba
 import jieba.posseg as pseg
 import json
-import config
-import pickle
+from modules.crawler import Crawler
 
-def segment(data):
-    res = []
-    for line in data:
-        if config.language == 'en':
-            tmp = nltk.word_tokenize(line)
-            seg = nltk.pos_tag(tmp)
-        if config.language == 'zh':
-            tmp = pseg.cut(line)
-            seg = [(t.word, t.flag) for t in tmp]
-        res.append(seg)
-    return res
-
-def phrase_in_lists(lists, phrase):
-    t1 = 0
-    t2 = len(lists) - 1
-    while t1 < t2:
-        t3 = (t1 + t2) // 2
-        if phrase > lists[t3]:
-            t1 = t3 + 1
-        else:
-            t2 = t3
-    if phrase == lists[t1]:
-        return True
-    else:
-        return False
-
-def is_noun(flag):
+def is_noun(config, flag):
     if config.language == 'en':
         flag = re.sub('JJ[RS]?', 'JJ', flag)
         flag = re.sub('NN[SP(PS)]?', 'NN', flag)
@@ -46,43 +19,48 @@ def is_noun(flag):
         else:
             return False
 
-def filter(lists, data):
-    res = []
-    phrase_set = set([''])
-    tot, tot2 = 0, 0
-    for seg in data:
-        n = len(seg)
-        for i in range(n):
-            for j in range(6):
-                words = [s[0] for s in seg[i:i+j+1]]
-                flags = [s[1] for s in seg[i:i+j+1]]
-                phrase, flag = '', '@'+'@'.join(flags)
-                if config.language == 'en':
-                    phrase = ' '.join(words)
-                if config.language == 'zh':
-                    phrase = ''.join(words)
-                if phrase not in phrase_set:
-                    phrase_set.add(phrase)
-                    if phrase_in_lists(lists, phrase):
-                        if not config.noun_filter or is_noun(flag):
-                            res.append(phrase)
-                        tot2 += 1
-                    tot += 1
-    print('phrase number: {}, in lists number: {}, final number: {}'.format(tot, tot2, len(res)))
-    with open(config.tmp_middle_res, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(res))
-
-def get_candidates():
+def get_candidates(config):
+    if config.task == 'expand':
+        crawler = Crawler(config)
+        text = []
+        with open(config.input_seed, 'r', encoding='utf-8') as f:
+            for seed in f.read().split('\n'):
+                if seed:
+                    text.append(crawler.get_snippet(seed))
+        text = '\n'.join(text)
+    else:
+        with open(config.input_text, 'r', encoding='utf-8') as f:
+            text = f.read()
+    text = re.sub('\xa3|\xae|\x0d', '', text).lower()
     if config.language == 'en':
         with open(config.en_list, 'r', encoding='utf-8') as f:
-            lists = f.read().split('\n')
+            vocabs = set(f.read().split('\n'))
     if config.language == 'zh':
         with open(config.zh_list, 'r', encoding='utf-8') as f:
-            lists = f.read().split('\n')
-    print('load vocab list done.')
-    with open(config.input_text, 'r', encoding='utf-8') as f:
-        text = re.sub('\xa3|\xae|\x0d', '', f.read()).lower()
-        data = text.split('\n')
-        data = segment(data)
-        filter(lists, data)
+            vocabs = set(f.read().split('\n'))
+    res = set()
+    for line in text.split('\n'):
+        if config.language == 'en':
+            tmp = nltk.word_tokenize(line)
+            seg = nltk.pos_tag(tmp)
+        if config.language == 'zh':
+            tmp = pseg.cut(line)
+            seg = [(t.word, t.flag) for t in tmp]
+        n = len(seg)
+        for i in range(n):
+            phrase, flag = seg[i][0], '@'+seg[i][1]
+            for j in range(i+1, min(n+1, i+7)):
+                if phrase not in res and phrase in vocabs and is_noun(config, flag):
+                    res.add(phrase)
+                if j < n:
+                    if config.language == 'en':
+                        phrase += ' '+seg[j][0]
+                    if config.language == 'zh':
+                        phrase += seg[j][0]
+                    flag += '@'+seg[j][1]
+    print('candidate concepts number: {}'.format(len(res)))
+    with open(config.text_path, 'w', encoding='utf-8') as f:
+        f.write(text)
+    with open(config.candidate_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(list(res)))
     print('preprocess done.')
