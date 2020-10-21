@@ -165,7 +165,7 @@ class Algorithm:
         for i in tqdm.tqdm(range(n)):
             c = self.concepts[i]
             tf = max([len(t.split(c))-1 for t in self.text])
-            idf = len([c in t for t in self.text])
+            idf = sum([c in t for t in self.text])
             score_list[i] = tf / math.log(1+idf)
             if self.config.language == 'zh':
                 score_list[i] *= math.log(len(c)+1)
